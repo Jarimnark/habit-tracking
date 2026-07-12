@@ -38,5 +38,14 @@ export const checkins = pgTable(
   (t) => [uniqueIndex("checkins_habit_date_idx").on(t.habitId, t.date)],
 );
 
+// One row per browser/device that enabled the daily reminder.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type Habit = typeof habits.$inferSelect;
 export type Checkin = typeof checkins.$inferSelect;

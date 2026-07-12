@@ -80,6 +80,12 @@ export default async function HabitsPage() {
                 {habit.description ? ` · ${habit.description}` : ""}
               </p>
             </div>
+            <Link
+              href={`/habits/${habit.id}/edit`}
+              className="text-xs text-stone-500 hover:underline"
+            >
+              Edit
+            </Link>
             <form action={setArchived.bind(null, habit.id, true)}>
               <button className="text-xs text-stone-500 hover:underline">Archive</button>
             </form>

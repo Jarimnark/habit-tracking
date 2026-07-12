@@ -7,13 +7,15 @@ import { checkIn, undoCheckIn } from "@/lib/actions";
 
 interface Props {
   habit: Habit;
+  /** The day being viewed/edited (YYYY-MM-DD) — today or a past date. */
+  date: string;
   checkedIn: boolean;
-  todayAmount: number | null;
-  todayNote: string | null;
+  dayAmount: number | null;
+  dayNote: string | null;
   currentStreak: number;
 }
 
-export function HabitCard({ habit, checkedIn, todayAmount, todayNote, currentStreak }: Props) {
+export function HabitCard({ habit, date, checkedIn, dayAmount, dayNote, currentStreak }: Props) {
   const measurable = !!habit.unit;
   const [expanded, setExpanded] = useState(false);
 
@@ -26,9 +28,9 @@ export function HabitCard({ habit, checkedIn, todayAmount, todayNote, currentStr
               // Measurable habits need an amount, so the circle opens the form.
               setExpanded((v) => !v);
             } else if (checkedIn) {
-              undoCheckIn(habit.id);
+              undoCheckIn(habit.id, date);
             } else {
-              checkIn(habit.id, new FormData());
+              checkIn(habit.id, date, new FormData());
             }
           }}
           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm transition ${
@@ -47,10 +49,10 @@ export function HabitCard({ habit, checkedIn, todayAmount, todayNote, currentStr
             {habit.name}
           </Link>
           <div className="text-xs text-stone-500">
-            {measurable && checkedIn && todayAmount != null && (
+            {measurable && checkedIn && dayAmount != null && (
               <span>
-                {todayAmount}
-                {habit.targetAmount ? ` / ${habit.targetAmount}` : ""} {habit.unit} today ·{" "}
+                {dayAmount}
+                {habit.targetAmount ? ` / ${habit.targetAmount}` : ""} {habit.unit} this day ·{" "}
               </span>
             )}
             {measurable && !checkedIn && habit.targetAmount && (
@@ -59,7 +61,7 @@ export function HabitCard({ habit, checkedIn, todayAmount, todayNote, currentStr
               </span>
             )}
             {currentStreak > 0 ? `🔥 ${currentStreak}-day streak` : "no streak yet"}
-            {todayNote && <span> · 📝 {todayNote}</span>}
+            {dayNote && <span> · 📝 {dayNote}</span>}
           </div>
         </div>
 
@@ -76,7 +78,7 @@ export function HabitCard({ habit, checkedIn, todayAmount, todayNote, currentStr
       {expanded && (
         <form
           action={async (formData) => {
-            await checkIn(habit.id, formData);
+            await checkIn(habit.id, date, formData);
             setExpanded(false);
           }}
           className="mt-3 flex flex-wrap items-center gap-2 border-t border-stone-100 pt-3 dark:border-stone-800"
@@ -87,7 +89,7 @@ export function HabitCard({ habit, checkedIn, todayAmount, todayNote, currentStr
               type="number"
               step="any"
               required
-              defaultValue={todayAmount ?? ""}
+              defaultValue={dayAmount ?? ""}
               placeholder={habit.unit ?? "amount"}
               className="w-28 rounded-md border border-stone-300 bg-transparent px-2 py-1.5 text-sm dark:border-stone-700"
             />
@@ -95,7 +97,7 @@ export function HabitCard({ habit, checkedIn, todayAmount, todayNote, currentStr
           <input
             name="note"
             type="text"
-            defaultValue={todayNote ?? ""}
+            defaultValue={dayNote ?? ""}
             placeholder="note (optional)"
             className="min-w-40 flex-1 rounded-md border border-stone-300 bg-transparent px-2 py-1.5 text-sm dark:border-stone-700"
           />
@@ -106,7 +108,7 @@ export function HabitCard({ habit, checkedIn, todayAmount, todayNote, currentStr
             <button
               type="button"
               onClick={() => {
-                undoCheckIn(habit.id);
+                undoCheckIn(habit.id, date);
                 setExpanded(false);
               }}
               className="text-sm text-stone-500 hover:underline"

@@ -32,7 +32,7 @@ Neon Postgres  (Drizzle over @neondatabase/serverless HTTP driver)
 
 ## Data model
 
-Two tables. Streaks and stats are computed at read time — at personal-use scale there's nothing to precompute.
+Three tables: `habits`, `checkins`, and `push_subscriptions` (one row per device that enabled reminders: unique `endpoint` plus the `p256dh`/`auth` keys web-push needs). Streaks and stats are computed at read time — at personal-use scale there's nothing to precompute.
 
 ```
 habits                          checkins
@@ -67,10 +67,29 @@ Computed in TypeScript from the ordered list of a habit's check-in dates:
 
 | Route | Purpose |
 |---|---|
-| `/` | **Today** — every active habit with a check-off control; measurable habits get an amount input; optional note per check-in; current streak badge |
+| `/` | **Today** — every active habit with a check-off control; measurable habits get an amount input; optional note per check-in; current streak badge. A date picker (with prev/next arrows) switches to any past day to backfill check-ins — future dates are rejected both in the UI and server-side |
+| `/dashboard` | Analytics — KPI tiles (active habits, 30-day check-ins, 30-day completion rate, longest current streak) and a 13-week calendar heatmap per habit; completion denominators start at each habit's creation date. Also hosts the reminder opt-in |
 | `/habits` | Manage habits — create, edit, archive/unarchive, delete |
 | `/habits/[id]` | Detail — streaks, totals, recent history with notes/amounts |
+| `/habits/[id]/edit` | Edit a habit's name, emoji, description, unit, and daily goal |
 | `/login` | Password form |
+| `/api/cron/reminder` | Vercel Cron target — sends the daily push reminder (auth: `CRON_SECRET` bearer token, not the session cookie) |
+
+## Daily reminder (web push)
+
+```
+Vercel Cron (vercel.json, daily at 14:00 UTC = 21:00 UTC+7)
+  → GET /api/cron/reminder   (Authorization: Bearer CRON_SECRET)
+      → any active habits unchecked today?  no → done, nothing sent
+      → yes → web-push to every row in push_subscriptions
+               ("3 habits waiting: 📖 Read, 🏃 Run, …")
+               410/404 responses prune dead subscriptions
+Browser: public/sw.js shows the notification; clicking it opens the app.
+```
+
+- Devices opt in from the dashboard ("Enable reminders on this device"), which registers the service worker, subscribes with the VAPID public key, and stores the subscription in the `push_subscriptions` table (endpoint unique, so re-enabling upserts).
+- VAPID keys are generated once (`npx web-push generate-vapid-keys`); the public half is exposed as `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
+- **The 9 PM schedule lives in `vercel.json` as a UTC cron expression** — Vercel crons don't understand timezones, so it's set to `0 14 * * *` (21:00 in UTC+7). Change it if `APP_TIMEZONE` changes. Hobby-plan accounts get daily crons, which is exactly what this needs.
 
 ## Auto-migration on Vercel deploy
 
@@ -98,10 +117,11 @@ Notes:
 | `DATABASE_URL` | Neon pooled connection string (runtime queries) |
 | `DATABASE_URL_UNPOOLED` | Neon direct connection string (migrations; optional, falls back to `DATABASE_URL`) |
 | `APP_PASSWORD` | The password that gates the whole app; changing it signs out all sessions |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web-push VAPID key pair (`npx web-push generate-vapid-keys`) |
+| `VAPID_SUBJECT` | Contact URI for the push service (`mailto:` you) |
+| `CRON_SECRET` | Bearer token for `/api/cron/reminder`; Vercel Cron sends it automatically |
 | `APP_TIMEZONE` | IANA timezone for resolving "today" (default `UTC`) |
 
-## Later (deliberately out of v1)
+## Later (deliberately out of scope)
 
 - Flexible schedules (3×/week, weekdays only) — would add a `schedule` column on `habits` and change streak semantics
-- Stats page with a year heatmap and completion-rate trends
-- Reminders (email or push)

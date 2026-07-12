@@ -2,14 +2,23 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { checkins, habits } from "@/db/schema";
+import { checkins, habits, pushSubscriptions } from "@/db/schema";
 import { isAuthed } from "./auth";
 import { today } from "./dates";
 
 // Middleware is the first gate; every action re-checks the session anyway.
 async function requireSession() {
   if (!(await isAuthed())) throw new Error("Unauthorized");
+}
+
+/** Check-ins may target any past date, but never the future. */
+function validateDate(date: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today()) {
+    throw new Error("Invalid date");
+  }
+  return date;
 }
 
 function optionalNumber(value: FormDataEntryValue | null): number | null {
@@ -58,6 +67,7 @@ export async function updateHabit(habitId: number, formData: FormData) {
   revalidatePath("/");
   revalidatePath("/habits");
   revalidatePath(`/habits/${habitId}`);
+  redirect("/habits");
 }
 
 export async function setArchived(habitId: number, archived: boolean) {
@@ -77,10 +87,10 @@ export async function deleteHabit(habitId: number) {
   revalidatePath("/habits");
 }
 
-/** Create or update today's check-in (idempotent via the unique habit+date constraint). */
-export async function checkIn(habitId: number, formData: FormData) {
+/** Create or update a check-in for the given day (idempotent via the unique habit+date constraint). */
+export async function checkIn(habitId: number, date: string, formData: FormData) {
   await requireSession();
-  const date = today();
+  validateDate(date);
   const amount = optionalNumber(formData.get("amount"));
   const note = optionalText(formData.get("note"));
 
@@ -92,15 +102,37 @@ export async function checkIn(habitId: number, formData: FormData) {
       set: { amount, note },
     });
   revalidatePath("/");
+  revalidatePath("/dashboard");
   revalidatePath(`/habits/${habitId}`);
 }
 
-/** Remove today's check-in (uncheck). */
-export async function undoCheckIn(habitId: number) {
+/** Remove a day's check-in (uncheck). */
+export async function undoCheckIn(habitId: number, date: string) {
   await requireSession();
+  validateDate(date);
   await db
     .delete(checkins)
-    .where(and(eq(checkins.habitId, habitId), eq(checkins.date, today())));
+    .where(and(eq(checkins.habitId, habitId), eq(checkins.date, date)));
   revalidatePath("/");
+  revalidatePath("/dashboard");
   revalidatePath(`/habits/${habitId}`);
+}
+
+export async function savePushSubscription(sub: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}) {
+  await requireSession();
+  await db
+    .insert(pushSubscriptions)
+    .values({ endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth })
+    .onConflictDoUpdate({
+      target: pushSubscriptions.endpoint,
+      set: { p256dh: sub.keys.p256dh, auth: sub.keys.auth },
+    });
+}
+
+export async function deletePushSubscription(endpoint: string) {
+  await requireSession();
+  await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
 }

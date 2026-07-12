@@ -32,6 +32,9 @@ export default async function RootLayout({
                 <Link href="/" className="hover:underline">
                   Today
                 </Link>
+                <Link href="/dashboard" className="hover:underline">
+                  Dashboard
+                </Link>
                 <Link href="/habits" className="hover:underline">
                   Habits
                 </Link>

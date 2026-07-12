@@ -10,6 +10,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Protect everything except the login page and static assets.
-  matcher: ["/((?!login|_next/static|_next/image|favicon.ico).*)"],
+  // Protect everything except the login page, static assets, the service
+  // worker, and the cron endpoint (which authenticates via CRON_SECRET).
+  matcher: ["/((?!login|api/cron|sw\\.js|_next/static|_next/image|favicon.ico).*)"],
 };
