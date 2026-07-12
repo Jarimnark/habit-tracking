@@ -78,7 +78,7 @@ Migrations are plain SQL files generated from the schema and committed to the re
 
 ```
 local:   edit src/db/schema.ts  →  npm run db:generate  →  commit drizzle/*.sql
-deploy:  Vercel build  →  "build": "drizzle-kit migrate && next build"
+deploy:  Vercel build  →  "build": "node scripts/migrate.mjs && next build"
                               │
                               └─ applies any pending drizzle/*.sql to Neon,
                                  recorded in the __drizzle_migrations table
@@ -87,9 +87,9 @@ deploy:  Vercel build  →  "build": "drizzle-kit migrate && next build"
 
 Notes:
 
-- `drizzle-kit migrate` connects using `DATABASE_URL_UNPOOLED` if set, falling back to `DATABASE_URL`. Neon's Vercel integration provides both; migrations prefer the direct (unpooled) connection.
+- Migrations run through `scripts/migrate.mjs`, which uses drizzle-orm's migrator over **Neon's HTTP driver** — the same fetch-based connection the app uses at runtime. (`drizzle-kit migrate` was deliberately avoided: it connects to Neon via websocket, which hangs in some networks.)
+- The script uses `DATABASE_URL_UNPOOLED` if set, falling back to `DATABASE_URL`. Neon's Vercel integration provides both.
 - If a migration fails, the build fails — the previous deployment stays live. That's the desired failure mode.
-- Runtime queries use Neon's pooled connection string over the HTTP driver.
 
 ## Environment variables
 

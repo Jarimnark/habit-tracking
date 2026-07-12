@@ -21,6 +21,6 @@ npm run dev
 
 1. Create a [Neon](https://neon.tech) project.
 2. Import this repo into Vercel and set the environment variables from `.env.example` (make sure `DATABASE_URL` is available to the **build** step — Vercel does this by default).
-3. Deploy. The build runs `drizzle-kit migrate && next build`, so pending migrations are applied before the new version goes live; if a migration fails, the build fails and the previous deployment stays up.
+3. Deploy. The build runs `node scripts/migrate.mjs && next build`, so pending migrations are applied before the new version goes live; if a migration fails, the build fails and the previous deployment stays up.
 
 The whole app sits behind the single `APP_PASSWORD` — sign in once and the session cookie lasts a year.
