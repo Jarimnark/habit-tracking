@@ -36,10 +36,18 @@ export default async function HabitDetailPage({
       <Link href="/" className="text-sm text-stone-500 hover:underline">
         ← Today
       </Link>
-      <h1 className="mt-2 text-xl font-semibold">
-        {habit.emoji ? `${habit.emoji} ` : ""}
-        {habit.name}
-      </h1>
+      <div className="mt-2 flex items-baseline justify-between gap-3">
+        <h1 className="text-xl font-semibold">
+          {habit.emoji ? `${habit.emoji} ` : ""}
+          {habit.name}
+        </h1>
+        <Link
+          href={`/habits/${habit.id}/edit`}
+          className="text-sm text-stone-500 hover:underline"
+        >
+          Edit
+        </Link>
+      </div>
       {habit.description && (
         <p className="mt-1 text-sm text-stone-500">{habit.description}</p>
       )}
