@@ -2,15 +2,14 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { db } from "@/db";
 import { checkins, habits } from "@/db/schema";
+import { isAuthed } from "./auth";
 import { today } from "./dates";
 
 // Middleware is the first gate; every action re-checks the session anyway.
 async function requireSession() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!(await isAuthed())) throw new Error("Unauthorized");
 }
 
 function optionalNumber(value: FormDataEntryValue | null): number | null {

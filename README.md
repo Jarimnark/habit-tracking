@@ -5,7 +5,7 @@ Personal habit tracker. Next.js + Drizzle + Neon Postgres, deployed on Vercel wi
 ## Local development
 
 ```bash
-cp .env.example .env   # fill in Neon + Google OAuth credentials
+cp .env.example .env   # fill in your Neon connection string and pick an APP_PASSWORD
 npm install
 npm run db:migrate     # apply migrations to your Neon database
 npm run dev
@@ -19,8 +19,8 @@ npm run dev
 
 ## Deploying to Vercel
 
-1. Create a [Neon](https://neon.tech) project and a [Google OAuth client](https://console.cloud.google.com/apis/credentials) (redirect URI: `https://<your-domain>/api/auth/callback/google`).
+1. Create a [Neon](https://neon.tech) project.
 2. Import this repo into Vercel and set the environment variables from `.env.example` (make sure `DATABASE_URL` is available to the **build** step — Vercel does this by default).
 3. Deploy. The build runs `drizzle-kit migrate && next build`, so pending migrations are applied before the new version goes live; if a migration fails, the build fails and the previous deployment stays up.
 
-Only Google accounts listed in `ALLOWED_EMAILS` can sign in.
+The whole app sits behind the single `APP_PASSWORD` — sign in once and the session cookie lasts a year.
